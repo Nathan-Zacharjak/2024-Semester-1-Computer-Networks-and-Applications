@@ -1,0 +1,9 @@
+X
+Y
+Z
+K
+LINKSTATE
+X-Y 5 
+Y-K 1
+UPDATE
+END

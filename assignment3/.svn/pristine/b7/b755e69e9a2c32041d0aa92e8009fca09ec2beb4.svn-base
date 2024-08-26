@@ -1,0 +1,13 @@
+A
+D
+B
+C
+E
+LINKSTATE
+A-D 2 A,B
+D-B 1 
+A-C 1 A,B
+C-E 1
+E-B 1
+UPDATE
+END

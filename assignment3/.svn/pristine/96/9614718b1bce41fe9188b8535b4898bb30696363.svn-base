@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+# Algorithm:
+# When Dijkstra algorithm is run, and multiple least cost paths exist to select from in an iteration
+# Where multiple best routes exist (The final least cost path ends up with a tie), always select the first one in an alphabetical ordering of the next hop node name (Find the first hop between the paths that go to different node, then pick the path that has the node that comes 1st in alphabetical order)
+
+# Tables:
+# Neighbour table needs to print out nodes in alphabetical order
+# Link-state Database needs to print out nodes in alphabetical order of the start node, and if there's a tie, in alphabetical order of the end node
+# Routing table: If there are two paths with the same cost to the destination, pick the path with the least hops
+# Routing table: Printed in alphabetical order of the destination node names
+
+# Add a logbook entry for each submission you make
+# For alphabetical ordering, there will probably be python functions that do this for you, but just in case, follow ASCII values, names can only be alphanumeric values
+
+
+# Dijkstra's algorithm practice using the sample topology:
+# Let's fill X's routing table
+# X first has to know all of the edges, and their costs
+# Y and Z are both neighbours of X, so no nodes' cost is set to infinity, instead their cost is set to the cost of travelling directly from X to them
+# So, Y has a cost of 5, and Z has a cost of 1
+# Their "next hop" value in the routing table is just set to themselves, since they are neighbours of X
+
+# Then we start the Dijkstra's algorithm loop, right now, X is the only node in N', that means Y and Z are the ones to be considered
+# Out of Y and Z, Z has the minimum cost, so it gets added to N'
+# Next, for all neighbours of Z, we check which ones are not in N', which is just Y
+# So we consider if adding the cost of Z to Y is cheaper than Y's current cost
+# Cost of Y is currently 5, just its initial value, the cost of Z + the cost of Z to Y is 4, so travelling via Z is cheaper
+# So, X's routing table gets updated: Y's cost is set to 4, and Y's "next hop" value is set to Z
+# (Some kind of chain of "via nodes" is needed here, maybe stored in an ordered array instead of just a "next hop" single value)
+# (Maybe just manually set the neighbour nodes "next hop" value to be initialised to themselves, then when a cost gets updated, change the updated node's "next hop" value to the previous node's "next hop" value...)
+# (So here, Y's value gets updated, so it find's Z's current "next hop" value, which is Z, and sets it's "next hop" value to Z in the routing table!)
+# (This should work because, when Y eventually comes to fill its routing table, the "next hop" value for Z will be Z because the cost is cheaper than going via X)
+# N' != N, so we continue the loop
+
+# On the final loop, Y is not in N' and its distance is a minimum just because it's the only node left!
+# Y gets added to N'
+# But Y now has no neighbours no in N', both X and Z are in, so no cost updating happens
+# Finally, N' = N, so the loop exits
+# X's routing table looks like:
+# Y|Z|4
+# Z|Z|1
+

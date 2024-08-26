@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+
+# Important notes for me to go through before submitting:
+# Algorithm:
+"""
+Multiple least cost paths exist to select from in an iteration, always select the first one in alphabetical order
+Where multiple best routes exist (The final least cost path ends up with a tie), always select the first one in an alphabetical ordering of the next hop node name (Find the first hop between the paths that go to different node, then pick the path that has the node that comes 1st in alphabetical order) 
+"""
+
+# Tables:
+"""
+Neighbour table needs to print out nodes in alphabetical order
+Link-state Database needs to print out nodes in alphabetical order of the start node, and if there's a tie, in alphabetical order of the end node
+Routing table: If there are two paths with the same cost to the destination, pick the path with the least hops
+Routing table: Printed in alphabetical order of the destination node names
+"""
+
+# Other important notes:
+"""
+Add a logbook entry for each submission you make
+For alphabetical ordering, there will probably be python functions that do this for you, but just in case, follow ASCII values, names can only be alphanumeric values
+"""
+
+# Dijkstra's algorithm practice using the sample topology:
+"""
+Let's fill X's routing table
+X first has to know all of the edges, and their costs
+Y and Z are both neighbours of X, so no nodes' cost is set to infinity, instead their cost is set to the cost of travelling directly from X to them
+So, Y has a cost of 5, and Z has a cost of 1
+Their "next hop" value in the routing table is just set to themselves, since they are neighbours of X
+"""
+
+"""
+Then we start the Dijkstra's algorithm loop, right now, X is the only node in N', that means Y and Z are the ones to be considered
+Out of Y and Z, Z has the minimum cost, so it gets added to N'
+Next, for all neighbours of Z, we check which ones are not in N', which is just Y
+So we consider if adding the cost of Z to Y is cheaper than Y's current cost
+Cost of Y is currently 5, just its initial value, the cost of Z + the cost of Z to Y is 4, so travelling via Z is cheaper
+So, X's routing table gets updated: Y's cost is set to 4, and Y's "next hop" value is set to Z
+(Some kind of chain of "via nodes" is needed here, maybe stored in an ordered array instead of just a "next hop" single value)
+(Maybe just manually set the neighbour nodes "next hop" value to be initialised to themselves, then when a cost gets updated, change the updated node's "next hop" value to the previous node's "next hop" value...)
+(So here, Y's value gets updated, so it find's Z's current "next hop" value, which is Z, and sets it's "next hop" value to Z in the routing table!)
+(This should work because, when Y eventually comes to fill its routing table, the "next hop" value for Z will be Z because the cost is cheaper than going via X)
+N' != N, so we continue the loop
+"""
+
+"""
+On the final loop, Y is not in N' and its distance is a minimum just because it's the only node left!
+Y gets added to N'
+But Y now has no neighbours no in N', both X and Z are in, so no cost updating happens
+Finally, N' = N, so the loop exits
+X's routing table looks like:
+Y|Z|4
+Z|Z|1
+"""
+
+
+
+# *Implementation Plan*
+# Building the routing table
+""" 
+The routing table (and all 3 main tables) will actually be giant big python dictionaries, so X's routing table will be referenced by something like: "RoutingTables.X"
+Once the edge and neighbour tables are built, and there are "nodeGroup" arrays of all the node names per group of connected nodes (each stored in one big nodeGroups array), each node will get an empty dictionary in the RoutingTables dictionary.
+
+Each empty dictionary will have empty strings initialised for values ".destination" and ".nextHop", and an empty string to represent "infinity" or "uninitialised" for ".cost"
+(Assuming there aren't negative costs, since Dijkstra's algorithm infinitely loops for negative cost cycles in a topology... BUT that doesn't mean there can't be negative costs period, so just in case, not initialising cost value to -1 or any negative value)
+
+Next a for loop is called on the big nodeGroups array, to loop through each group of connected nodes one at a time.
+Inside each loop is another loop, through each entry in the nodeGroup array, to build the routing table for each node in the group. Something like a "GetRoutingTable(nodeName, nodeGroup, edgeCostList)" function will be called on a for loop though all of the nodes in the nodeGroup.
+
+The GetRoutingTable(nodeName, nodeGroup, edgeCostList) function will then have all the info it needs to just build the routing table for the single node "nodeName".
+All of its logic is just implementing Dijkstra's algorithm as described by the "Dijkstra's algorithm practice using the sample topology" above, where N = nodeGroup, N' is initialised as an empty array, and D() is just returning the cost from either edgeCostList, or the routing table itself.
+
+Finally, need to test GetRoutingTable() works with all the outlined edge cases in the "Important notes" above, mostly sorting things by alphabetical order to decide ties, or picking the least hops out of 2 equal cost paths.
+May need to at the end of running GetRoutingTable(), to loop through the "next hop" values of each destination node in reverse to check which path is shorter. Or maybe store the potential shortest paths as you go and then decide on the shortest one.
+"""

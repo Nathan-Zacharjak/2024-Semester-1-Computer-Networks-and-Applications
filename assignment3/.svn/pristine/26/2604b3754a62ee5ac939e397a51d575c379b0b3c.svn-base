@@ -1,0 +1,331 @@
+#!/usr/bin/env python3
+
+# ============================The main loop of the program can be found at the bottom============================
+
+# First, initialise the global variables we need, notibally the neighbours, LSDB and routing tables
+neighbours = {}
+nodeGroups = []
+LSDB = {}
+routingTables = {}
+
+nodeNames = []
+LINKSTATE = False
+
+# ============================Updating Link State============================
+# Once the new startNode, endNode and cost is known, the nodeGroups, neighbours and LSDB tables can be updated.
+
+# First is updating the neighbours dictionary.
+# This function creates new entries in the two given node's neighbour tables, or removes them if the cost is -1
+def UpdateNeighbourTables(startNode, endNode, cost):
+    # First, initialise any nodes that don't have a neighbours set yet to have one
+    for node in nodeNames:
+        if not node in neighbours.keys():
+            neighbours[node] = set()
+
+    # If the cost is -1, remove the startNode and endNode from each other's dictionaries.
+    # If the connection doesn't exist, we don't want to try to remove it!
+    if cost == -1:
+        if startNode in neighbours[endNode]:
+            neighbours[endNode].remove(startNode)
+        if endNode in neighbours[startNode]:
+            neighbours[startNode].remove(endNode)
+
+    # The cost not being -1 signifies we're adding, not removing, a connection!
+    else:
+        neighbours[startNode].add(endNode)
+        neighbours[endNode].add(startNode)
+
+    print("Neighbours:", neighbours)
+
+
+# Secondly, the nodeGroups array is built with Depth-first-search.
+visitedNodes = set()
+def DepthFirstSearch(indexNode, previousNode):
+    # If indexNode is in visitedNodes, then return.
+    if indexNode in visitedNodes:
+        return
+    
+    # If indexNode is not in visitedNodes, add the indexNode to visitedNodes.
+    visitedNodes.add(indexNode)
+
+    # If previousNode is None, and the indexNode is not already in a group,
+    # then create a new set containing only indexNode, and append it to nodeGroups.
+    if previousNode == None:
+        nodeGroups.append({indexNode})
+    # If previousNode is not None, 
+    # then search for a group containing previousNode in the nodeGroups array, and append indexNode to it.
+    else:
+        for group in nodeGroups:
+            if previousNode in group:
+                group.add(indexNode)
+                break
+
+    # Then for each neighbour node of indexNode, call the DFS function
+    # with the neighbour node as the index node: DepthFirstSearch(neighbourNode, indexNode)
+    for neighbourNode in neighbours[indexNode]:
+        DepthFirstSearch(neighbourNode, indexNode)
+
+def BuildNodeGroups():
+    # Create an empty set of visitedNodes and loop through each indexNode in the neighbours dictionary.
+    visitedNodes.clear()
+    # Each time there is a change in node topography, we must re-build the nodeGroups array from scratch
+    nodeGroups.clear()
+    for indexNode in nodeNames:
+        # From here, make a recursive DepthFirstSearch(indexNode, previousNode) function, taking the indexNode.
+        DepthFirstSearch(indexNode, None)
+    
+    print("Node Groups:", nodeGroups)
+
+
+# Lastly, the LSDB dictionary is updated. 
+def UpdateLSDBTables(startNode, endNode, cost):
+    # If a node doesn't have an LSDB array, set it to an empty one
+    for node in nodeNames:
+        if not node in LSDB.keys():
+            LSDB[node] = []
+
+    # Loop through each group in nodeGroups, if startNode doesn't appear in the group, then skip the group.
+    for group in nodeGroups:
+        if startNode in group or endNode in group:
+            # Else, create the new connection
+            newConnection = {"startNode": startNode, "endNode": endNode, "cost": cost}
+
+            # Then create a groupConnections array containing all of the unique connections
+            # between all of the nodes in the group.
+            groupConnections = []
+
+            # Loop through each node in the group, and loop through their LSDB arrays.
+            for node in group:
+                # If there is a connection in a node's LSDB
+                # that doesn't contain either the start or end node in it's group, remove the connection
+                for connection in LSDB[node]:
+                    if not connection["startNode"] in group and not connection["endNode"] in group:
+                        LSDB[node].remove(connection)
+
+                for connection in LSDB[node]:
+                    # If the current connection is not in the groupConnections array, add it!
+                    if not connection in groupConnections:
+                        groupConnections.append(connection)
+            
+            # Next, search for the newConnection in the groupConnections array,
+            oldConnection = None
+            for connection in groupConnections:
+                if connection["startNode"] == startNode and connection["endNode"] == endNode:
+                    oldConnection = connection
+                    break
+            
+            # Remove
+            # If the connection is found, and the cost is -1, remove it
+            if cost == -1:
+                if oldConnection != None:
+                    groupConnections.remove(oldConnection)
+            # Update
+            # If the cost is not -1, update the connection with the new cost.
+            else:
+                if oldConnection != None:
+                    groupConnections.remove(oldConnection)
+                    groupConnections.append(newConnection)
+                # Add
+                # If the connection isn't found, append the connection to the groupConnections array.
+                else:
+                    groupConnections.append(newConnection)
+            
+            # Finally, for each node in the nodeGroup, set their LSDB array to be the new groupConnections array.
+            for node in group:
+                LSDB[node] = groupConnections
+
+    print("LSDB:")
+    for node in LSDB:
+        print(f"{node}:")
+        for connection in LSDB[node]:
+            print(connection)
+
+
+# This function builds the neighbour, nodeGroups and LSDB tables per line of input
+def UpdateLinkState(startNode, endNode, cost):
+    UpdateNeighbourTables(startNode, endNode, cost)
+    BuildNodeGroups()
+    UpdateLSDBTables(startNode, endNode, cost)
+
+# ============================Building the routing table============================
+import math
+
+# Once the edge and neighbour tables are built, and there are "nodeGroup" sets of all the node names per group
+# of connected nodes (each stored in one big nodeGroups array), each node will get an empty dictionary in the 
+# routingTables dictionary.
+def BuildRoutingTables():
+    # Next a for loop is called on the big nodeGroups array, to loop through each group of connected nodes
+    # one at a time.
+    # Inside each loop is another loop, through each entry in the nodeGroup array, to build the routing
+    # table for each node in the group. Something like a "GetRoutingTable(startNode, nodeGroup, nodeLSDB)"
+    # function will be called on a for loop though all of the nodes in the nodeGroup.
+    for group in nodeGroups:
+        for startNode in group:
+            # Each empty dictionary will have empty strings initialised for values ".destination" and ".nextHop",
+            # "infinity" to represent "infinity" or "uninitialised" for ".cost", and finally an empty ".path" array
+            # to hold the order and names of the nodes needed to get to the destination node
+            routingTables[startNode] = []
+            for endNode in group:
+                if startNode != endNode:
+                    routingTables[startNode].append({"destination": endNode, "nextHop": "", "cost": math.inf, "path": []})
+            
+            # The GetRoutingTable(startNode, nodeGroup, nodeLSDB) function will then have all the info it needs to 
+            # just build the routing table for the single node "startNode".
+            # All of its logic is just implementing Dijkstra's algorithm as described below, where N = nodeGroup, N' is initialised as an empty array, 
+            # and D() is just returning the cost from either LSDB, or the routing table itself.
+            routingTables[startNode] = GetRoutingTable(startNode, group, LSDB[startNode])
+
+    print("Routing Tables:")
+    for node in routingTables:
+        print(f"{node}:")
+        for table in routingTables[node]:
+            print(table)
+
+# Dijkstra's algorithm
+def GetRoutingTable(startNode, nodeGroup, nodeLSDB):
+    return [{"Wow": 1, "Whoa": 24}, {"huh": 2, "blah":7}]
+
+"""
+Let's fill X's routing table
+X first has to know all of the edges, and their costs (using the LSDB dictionary)
+Y and Z are both neighbours of X, so no nodes' cost is set to infinity, instead their cost is set to the cost of travelling directly from X to them
+So, Y has a cost of 5, and Z has a cost of 1
+Their "next hop" value in the routing table is just set to themselves, since they are neighbours of X
+Their path arrays are set to an array just containing themselves: [Y] and [Z]
+X doesn't have a row in the routing table to itself, as it is the source node
+"""
+
+"""
+Then we start the Dijkstra's algorithm loop, right now, X is the only node in N', that means Y and Z are the ones to be considered
+Out of Y and Z, Z has the minimum cost, so it gets added to N'
+Next, for all neighbours of Z, we check which ones are not in N', which is just Y
+So we consider if adding the cost of Z to Y is cheaper than Y's current cost
+Cost of Y is currently 5, just its initial value, the cost of Z + the cost of Z to Y is 4, so travelling via Z is cheaper
+So, X's routing table gets updated: Y's cost is set to 4, and Y's "next hop" value is set to Z
+(So here, Y's value gets updated, so it find's Z's current "next hop" value, which is Z, and sets it's "next hop" value to Z in the routing table!)
+Also Z's path array gets copied, as it is the previous node, and Y gets added to the array, and the array is set to Y's path array [Z,Y]
+(If the cost between Y and Z + Y was equal, we would choose to ignore Z and keep the cost of travelling directly to Y, since this is less hops! Checked via the length of Y's path array, and Z's path array + 1)
+(If the cost and hop number between Y and Z + Y was equal, we would ignore Z and just keep the current path between X and Y, since Y comes first from Z in alphabetical order)
+N' != N, so we continue the loop
+"""
+
+"""
+On the final loop, Y is not in N' and its distance is a minimum just because it's the only node left!
+Y gets added to N'
+But Y now has no neighbours no in N', both X and Z are in, so no cost updating happens
+Finally, N' = N, so the loop exits
+X's routing table looks like:
+Y|Z|4
+Z|Z|1
+
+Finally, need to test GetRoutingTable(startNode, nodeGroup, nodeLSDB) works with all the outlined edge cases in the "Important notes" above, mostly sorting things by alphabetical order to decide ties, or picking the least hops out of 2 equal cost paths.
+Sorting things by alphabetical order should be easy, just have to keep an array of various things are call a sort function, but picking the least hops should be a simple as comparing the lengths of the path arrays of the old path, and the path to the new node +1 (+1 to add the hop we're considering from the new node, to the old node)
+"""
+
+# Generating output
+def PrintExpectedOutput(nodesToPrint):
+    return True
+"""
+Once requested nodes to print are known (maybe stored in a nodesToPrint array) the Generating output should be as simple as reading the appropriate values from the 3 main tables.
+
+For the node names stage, no output is needed
+
+For the LINKSTATE stage, first the neighbour, edge and nodeGroup tables would have to be updated.
+Then, the GetRoutingTable() function would be called on each node on each array in the nodeGroups array, and its result put into the routingTables for each node
+Finally, for each of the nodes in the nodesToPrint array, print out (using print()) that node's corresponding values in the neighbour, edge, and routing tables, in the appropriate format.
+
+Neighbour tables need to print out nodes in alphabetical order.
+LSDB tables need to print out nodes in alphabetical order of the start node, and if there's a tie, in alphabetical order of the end node.
+Routing tables need to print in alphabetical order of the destination node names.
+Nodes can be floating on their own with no connections, in that case, they will have all empty tables, but make sure to still print their empty tables out if requested!
+
+e.g for X-Z 1 X,Y:
+X Neighbour Table:
+Z|1
+
+X LSDB:
+X|Z|1
+
+X Routing Table:
+Z|Z|1
+
+Y Neighbour Table:
+
+Y LSDB:
+
+Y Routing Table:
+
+
+For the UPDATE stage, the behaviour can be exactly the same as the LINKSTATE stage, so long as the old input values are override by the new ones before GetRoutingTable() is called on the big nodeGroups array.
+"""
+
+
+# ============================Processing the input============================
+
+# Input is going to be given via standard input, so I'm going to create a bunch of testing text files: 
+# "test1.txt", "test2.txt" etc, and read into standard input into this python script via the command: 
+# "Dijkstra < test.txt".
+# These test files will be in the same directory as this python script is in, and contain the lines of input.
+
+# Then we can use sys.stdin to get an array of lines of the standard input 
+# (This is just how python does it, have to import the sys library as well), 
+# and loop through all of the input lines.
+# (Have to call line.rstrip() to get rid of the newline character at the end of each line)
+import sys
+
+for i, line in enumerate(sys.stdin):
+    line = line.rstrip()
+
+    # Before doing anything, check the line is "END", if it is, break the loop 
+    # (since the whole program is one big loop, there shouldn't be any code underneath the loop 
+    # and the program should just exit)
+    if line == "END":
+        break
+    
+    # Then we should check if the line is "LINKSTATE", if it is, set a LINKSTATE bool to true to tell our program
+    #  we aren't reading node names any more. If "UPDATE" is read, continue (as in the keyword continue), and skip
+    #  this line as our program is going to behave the same.
+    if line == "LINKSTATE":
+        LINKSTATE = True
+        continue
+    elif line == "UPDATE":
+        continue
+
+    # Now check if the LINKSTATE bool is true or not, if not, add the node name to a nodeNames array 
+    # and we're done with this loop.
+    if not LINKSTATE:
+        nodeNames.append(line)
+        continue
+    
+    # If the LINKSTATE bool is true, process the input. We split the string by spaces
+    splitLine = line.split(" ")
+    # then the first "X-X" connection string is split by dashes and put into "startNode" and "endNode" strings.
+    startEndNodes = splitLine[0].split("-")
+    startNode = startEndNodes[0]
+    endNode = startEndNodes[1]
+    # The second cost string is turned into an integer, and put into a "cost" integer variable.
+    cost = int(splitLine[1])
+    # The third print string is split by commas, 
+    # and the resulting array of strings is put straight away into a "nodesToPrint" array variable.
+    nodesToPrint = []
+    if len(splitLine) > 2:
+        nodesToPrint = splitLine[2].split(",")
+
+    print(f"\n{i+1}", "\nStart node:", startNode, "\nEnd node:", endNode, "\nCost:", cost, "\nNodes to print:", nodesToPrint)
+
+    # Then call a UpdateLinkState(startNode, endNode, cost) function,
+    # which is described by the "Updating Link State" section above.
+    # This function will manipulate the global nodeGroups, neighbours and LSDB array/dictionary variables.
+    UpdateLinkState(startNode, endNode, cost)
+
+    # Then call a BuildRoutingTables() function to make just the routingTables dictionary,
+    # which is described by the building the routing table function above.
+    # This function will manipulate the global routingTables dictionary variable.
+    BuildRoutingTables()
+
+    # Finally, a PrintExpectedOutput(nodesToPrint) function will be called,
+    # which is described by the "Generating output" section above.
+    # This function will handle printing to standard output all of the required info from the nodes in the nodesToPrint array.
+    PrintExpectedOutput(nodesToPrint)
+
+    # Then the loop finally finishes a loops back to the next line of input.

@@ -1,0 +1,9 @@
+X
+Y
+Z
+LINKSTATE
+X-Y 2 X,Y
+X-Z 1 
+Z-Y 1 X,Z
+UPDATE
+END

@@ -1,0 +1,10 @@
+svn mkdir -m "assignment3" --parents https://version-control.adelaide.edu.au/svn/a1704695/2024/s1/cna/routing
+
+svn checkout https://version-control.adelaide.edu.au/svn/a1704695/2024/s1/cna/routing assignment3
+
+cd assignment3
+
+svn add . --force
+
+svn commit -m ""
+

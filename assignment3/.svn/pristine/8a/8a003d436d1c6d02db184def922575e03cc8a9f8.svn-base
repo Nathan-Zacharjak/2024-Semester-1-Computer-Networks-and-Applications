@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+
+# Algorithm:
+# When Dijkstra algorithm is run, and multiple least cost paths exist to select from in an iteration
+# Where multiple best routes exist (The final least cost path ends up with a tie), always select the first one in an alphabetical ordering of the next hop node name (Find the first hop between the paths that go to different node, then pick the path that has the node that comes 1st in alphabetical order)
+
+# Tables:
+# Neighbour table needs to print out nodes in alphabetical order
+# Link-state Database needs to print out nodes in alphabetical order of the start node, and if there's a tie, in alphabetical order of the end node
+# Routing table: If there are two paths with the same cost to the destination, pick the path with the least hops
+# Routing table: Printed in alphabetical order of the destination node names
+
+# Add a logbook entry for each submission you make
+# For alphabetical ordering, there will probably be python functions that do this for you, but just in case, follow ASCII values, names can only be alphanumeric values
